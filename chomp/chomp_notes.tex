@@ -35,11 +35,11 @@ where
 \[ \mathcal{F}_{obs} : \Xi \rightarrow \mathbb{R} \]
 \[ \mathcal{F}_{smooth} : \Xi \rightarrow \mathbb{R} \]
 and $\lambda$ is a weighting factor which represents the tradeoff between the two sometimes conflicting functional values.  
+\newline\newline
 We can define the smoothness functional as the integration across the trajectory of any function which represents dynamic criteria.  One option, shown here, is to use squared velocity norms:
 \begin{equation}\label{eq:f_smooth}
 \mathcal{F}_{smooth} = \frac{1}{2} \int_0^1 \left\| \frac{d}{dt} \xi(t)\right\|^2 dt 
 \end{equation}
-\todo{Why does it have the leading $\frac{1}{2}$?}
 \newline
 Now define a function $x$ as follows:
 \[x : \mathcal{C} \times \mathcal{B} \rightarrow \mathbb{R}^3 \]
@@ -65,7 +65,7 @@ To do this we must define the concept of functional gradient.  The functional gr
 \[ \phi : \left[0,1\right] \rightarrow \mathcal{C} \subset \mathbb{R}^d \]
 In other words we want to find:
 \[ \bar{\nabla}\mathcal{U} = \arg\max_{\phi}\;\mathcal{U}\left[\xi + \phi\right] \]
-It can be seen from the above equation that the outcome of the maximization is heavily dependent on the size of $\phi$.  Because $\phi$ represents a normalized vector, this is equivalent to saying the outcome of the maximization is strongly dependent on our choose of norm.  
+It can be seen from the above equation that the outcome of the maximization is heavily dependent on the size of $\phi$.  Because $\phi$ represents a normalized vector, this is equivalent to saying the outcome of the maximization is strongly dependent on our choose of norm.  \todo{Check this statement to be sure the understanding is correct.}
 One option is the Euclidean norm.  For a vector $x \subset \mathbb{R}^n = \left(x_1,...,x_n\right)$:
 \[\left\|x \right\| = \sqrt{\sum_{i=1}^n x_i^2} \]
 For a trajectory:
@@ -74,7 +74,7 @@ Using this as our norm, the Euclidean function gradient for a function $\mathcal
 \begin{equation}\label{eq:functional_gradient}
 \bar{\nabla} \mathcal{F}\left[\xi\right] = \frac{\partial v}{\partial \xi} - \frac{d}{dt}\frac{\partial v}{\partial \xi'} 
 \end{equation}
-\todo{Where did this come from? What is the math behind it?}
+This is the Euler-Lagrange equation.
 \newline
 Now consider equation ~\ref{eq:f_smooth}.  Let:
 \[v(\xi(t)) = \left\|\frac{d}{dt} \xi(t)\right\|^2 \]
@@ -102,4 +102,24 @@ We can also define an inner product on two trajectories:
 \[ \left<\xi_1, \xi_2\right> = \int \sum_{n=1}^k \alpha_n(D^n\xi_1(t))(D^n\xi_2(t)) dt \]
 We use the $A$ operator only to differentiate this norm and dot product from the standard Euclidean norm.  $A$ must be constructed such that $A = D^TD$ where $D$ is a consituent differential operator \todo{What is this?} Then:
 \[ \left<f, Af\right> = \int(Df(t))^2 dt \]
+
+\section*{Identifying Parameterization}
+In order to numerically perform a function gradient, a specific parameterization of the trajectory must be selected.  One choice is to sample from the trajectory at uniform time steps $\Delta t$: $\xi = \left[q_1^T,...,q_n^T\right]^T$.  We let $q_0$ represent the start configuration and $q_{n+1}$ represent the goal configuration.  Then the smoothness functional can be represented as:
+\[ \mathcal{F}_{smooth} = \frac{1}{2(n+1)}\sum_{t=1}^{n+1} \left\| \frac{q_{t+1} - q_t}{\Delta t} \right\|^2 \]
+We can generate an $n$ by $n$ differencing matrix $K$:
+\[ K = \left[\begin{array}{ccccc}
+1 & 0 & 0 & ... & 0 \\
+0 & -1 & 1 & ... & 0 \\
+. & . & . & . & . \\
+0 & 0 & ... & -1 & 1 \\
+0 & 0 & ... & 0 & -1 \\
+\end{array}
+\right]
+\]
+Then if we define a vector $e$ to handle endpoints conditions:
+\[ e = \left[ \begin{array}{ccccc} -q_0 & 0 & ... & 0 & q_{n+1} \end{array} \right]^T \]
+We can rewrite our smoothness function:
+\[ \mathcal{F}_{smooth} = \frac{1}{2}\left\| K\xi + e \right\|^2 \]
+Multiplying this out we get:
+\[ \mathcal{F}_{smooth} = \frac{1}{2}( \xi^TK^TK\xi + 2\xi^TK^Te + e^Te) = \frac{1}{2}\xi^TA\xi + \xi^Tb + c \]
 \end{document}  
