@@ -1,0 +1,51 @@
+\documentclass[11pt, oneside]{article}   	% use "amsart" instead of "article" for AMSLaTeX format
+\usepackage{geometry}                		% See geometry.pdf to learn the layout options. There are lots.
+\geometry{letterpaper}                   		% ... or a4paper or a5paper or ... 
+%\geometry{landscape}                		% Activate for for rotated page geometry
+%\usepackage[parfill]{parskip}    		% Activate to begin paragraphs with an empty line rather than an indent
+\usepackage{graphicx}				% Use pdf, png, jpg, or eps§ with pdflatex; use eps in DVI mode
+								% TeX will automatically convert eps --> pdf in pdflatex		
+\usepackage{amssymb}
+
+\title{Notes on Reconfiguration Among Clutter}
+%\date{}							% Activate to display a given date or no date
+
+\begin{document}
+\maketitle
+\section*{Introduction}
+We wish to build on Mehmet's previous work on reconfiguration among clutter and design a planner which will search the space of possible pushing trajectories to search for a valid grasp.  This document serves  as a scratch pad for formulating the problem.
+
+\section*{Naive Problem Formulation}
+Define the following:
+\begin{enumerate}
+\item $q_t$ - an $n$-dimensional vector describing the configuration of the arm at time $t$
+\item  $O_t^i$ - the 3-dimensional ($x$, $y$, $\theta$) which represents the configuration of obstacle $i$ at time $t$
+\item $g_t$ - the 3-dimensional ($x$, $y$, $\theta$) configuration of the goal object at time $t$
+\end{enumerate}
+Then we can define the state at time $t$, $s_t$, by the vector:
+\[ s_t = \left[\begin{array}{ccccc}
+q_t & g_t & O_t^1 & ... & O_t^k
+\end{array}
+\right] \]
+which represents the configuration of the arm, the pose of the goal and the pose of all obstacles at a particular snapshot in time.
+\newline\newline
+We can define the start state as the initial pose of the arm, initial pose of the goal object and the initial pose of all obstacles at a particular snapshot in time.  Defining the goal is less straightforward.  Define $e'_q$ as the pose of the end-effector in goal object frame when the arm is at configuration $q$.  Let $S$ be the set of all poses of the end-effector in goal object frame that result in a valid grasp of the object. Then we can say we which to find any $q$ such that $e'_q \in S$.
+\newline\newline
+We can define a set of valid grasps using the concept of TSRs.  A TSR is comprised of a matrix, $Bw$, which expresses valid bounds of values for the pose of the end-effector in object frame:
+\[ Bw = \left[ \begin{array}{cc}
+x_{min} & x_{max} \\
+y_{min} & y_{max} \\
+z_{min} & z_{max} \\
+\alpha_{min} & \alpha_{max} \\
+\beta_{min} & \beta_{max} \\
+\theta_{min} & \theta_{max} \\
+\end{array}\right] \]
+Thus for a particular arm configuration $q$ we can first extract the pose of the end-effector in world coordinates, $e_q$, using forward kinematics:
+\[ e_q = F(q) \]
+We can then convert to the pose of the end-effector in goal object coordinates:
+\[ e'_q = e_q g^{-1}\]
+where $g$ represents the pose of the goal object in world coordinates.
+We can now check that the $x,y,z,\alpha,\beta, \theta$ values represented by the transform fall inside the bounds represented in the TSR.  If so, we have found a valid grasp.  Note: We will need to ensure that the pre shape of the hand during pushing is such that we can close the hand without fear of catching other obstacles.  Otherwise, we will have to do a collision check here.
+\newline\newline
+
+\end{document}  
