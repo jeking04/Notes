@@ -16,6 +16,7 @@
 We wish to build on Mehmet's previous work on reconfiguration among clutter and design a planner which will search the space of possible pushing trajectories to search for a valid grasp.  This document serves  as a scratch pad for formulating the problem.
 
 \section*{Naive Problem Formulation}
+\subsection*{Representation of State}
 Define the following:
 \begin{enumerate}
 \item $q_t$ - an $n$-dimensional vector describing the configuration of the arm at time $t$
@@ -27,8 +28,10 @@ Then we can define the state at time $t$, $s_t$, by the vector:
 q_t & g_t & O_t^1 & ... & O_t^k
 \end{array}
 \right] \]
-which represents the configuration of the arm, the pose of the goal and the pose of all obstacles at a particular snapshot in time.
-\newline\newline
+which represents the configuration of the arm, the pose of the goal object and the pose of all obstacles at a particular snapshot in time.
+
+
+\subsection{Representing the Goal}\label{sec:graspability}
 We can define the start state as the initial pose of the arm, initial pose of the goal object and the initial pose of all obstacles at a particular snapshot in time.  Defining the goal is less straightforward.  Define $e'_q$ as the pose of the end-effector in goal object frame when the arm is at configuration $q$.  Let $S$ be the set of all poses of the end-effector in goal object frame that result in a valid grasp of the object. Then we can say we which to find any $q$ such that $e'_q \in S$.
 \newline\newline
 We can define a set of valid grasps using the concept of TSRs.  A TSR is comprised of a matrix, $Bw$, which expresses valid bounds of values for the pose of the end-effector in object frame:
@@ -46,6 +49,29 @@ We can then convert to the pose of the end-effector in goal object coordinates:
 \[ e'_q = e_q g^{-1}\]
 where $g$ represents the pose of the goal object in world coordinates.
 We can now check that the $x,y,z,\alpha,\beta, \theta$ values represented by the transform fall inside the bounds represented in the TSR.  If so, we have found a valid grasp.  Note: We will need to ensure that the pre shape of the hand during pushing is such that we can close the hand without fear of catching other obstacles.  Otherwise, we will have to do a collision check here.
-\newline\newline
+
+\subsection*{Action Space}
+We want to search over our action space to find a series of actions that, when strung together, will provide a path for the end-effector to grasp the goal object.  We can define an action using the following parameters:
+\begin{enumerate}
+\item $\theta$ - Specifies the direction of the movement.
+\item $d$ - Specifies duration of the movement.
+\item $p$ - Represents the pre shape of the hand during the movement.
+\item $v$ - The volume of space swept out by the hand during execution of the movement (TODO: should this be limited to just hand, or do we expand to also include the full manipulator)
+\end{enumerate}
+The cost of an action will be calculated as the length of the action.  We could also add a penalty for the number of objects that come into collision with the hand during action execution.  However, this will guide the planner toward longer but collision free regions of search space, which is not the point.
+
+\subsection*{Forward Planning with Graph Search}
+Given a start configuration, we can perform a forward search through the graph by forward simulating each action in the action set.  During simulation we will use the physics model developed by Mehmet to  simulate the movement of any objects that intersect with the swept volume, $v$, during action executing.  If any object is pushed into collision with another object in the scene, the action will be considered failed and it will be not be added to the search graph.  If the object is funneled into the hand as a result of the movement, that action will also be considered failed and again it will not be added to the search graph.   To determine when the search can be stopped, the configuration of the goal object and the end-effector will be examined to determine whether the goal object has become graspable.  Details of this check were explained in section ~\ref{sec:graspability}.
+
+
+We will turn the state space into a set of discrete values in each dimension and snap to the center of the nearest grid cell during execution.   This will allow us to recognize when we are exploring a region of state space that we have previously explored.  
+
+We assume that we can precompute the volume, $v$, of space swept by each action and then just apply a transform to use it at runtime.  Encoded in this assumption is the fact that collision with an obstacle will move the obstacle not the manipulator.  In other words, collision with the obstacle will not knock the manipulator off course.
+
+\subsubsection*{Heuristics}
+An obvious choice for heuristic is straight line distance from the end-effector to the goal object.  To make the heuristic admissible, it will have to encode the straight line distance from the closest point of the hand to the goal object and the goal object.  
+
+\section*{Trivial Scenario}
+We will first implement and test a fairly trivial scenario to prove the concept and get an idea about scenes.  
 
 \end{document}  
