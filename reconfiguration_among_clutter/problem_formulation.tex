@@ -61,8 +61,15 @@ We want to search over our action space to find a series of actions that, when s
 The cost of an action will be calculated as the length of the action.  We could also add a penalty for the number of objects that come into collision with the hand during action execution.  However, this will guide the planner toward longer but collision free regions of search space, which is not the point.
 
 \subsection*{Forward Planning with Graph Search}
-Given a start configuration, we can perform a forward search through the graph by forward simulating each action in the action set.  During simulation we will use the physics model developed by Mehmet to  simulate the movement of any objects that intersect with the swept volume, $v$, during action executing.  If any object is pushed into collision with another object in the scene, the action will be considered failed and it will be not be added to the search graph.  If the object is funneled into the hand as a result of the movement, that action will also be considered failed and again it will not be added to the search graph.   To determine when the search can be stopped, the configuration of the goal object and the end-effector will be examined to determine whether the goal object has become graspable.  Details of this check were explained in section ~\ref{sec:graspability}.
+Given a start configuration, we can perform a forward search through the graph by forward simulating each action in the action set.  During simulation we will use the physics model developed by Mehmet to  simulate the movement of any objects that intersect with the swept volume, $v$, during action executing.  Note: Does this use the concept of grasp region? 
 
+There are two cases where an edge (action) will not be added to the graph:
+\begin{enumerate}
+\item An object is pushed into collision with another object in the scene
+\item An object is funneled into the hand as a result of the action.
+\end{enumerate}
+
+To determine when the search can be stopped, the configuration of the goal object and the end-effector will be examined to determine whether the goal object has become graspable.  Details of this check were explained in section ~\ref{sec:graspability}.
 
 We will turn the state space into a set of discrete values in each dimension and snap to the center of the nearest grid cell during execution.   This will allow us to recognize when we are exploring a region of state space that we have previously explored.  
 
@@ -88,6 +95,14 @@ We will first implement and test a fairly trivial scenario to prove the concept 
 \item Goal - The goal is to get the point robot within 1 grid cell in each of the 4 cardinal directions of the goal item - which is a point described by $x$, $y$ location
 \item Action set involves movements in only the cardinal directions.
 \item If an obstacle is hit during action execution it moves in a direction +90 degrees from the direction of the action by 1 single grid cell.
+\end{enumerate}
+
+\section*{Open Questions}
+The following is a list of questions to consider:
+\begin{enumerate}
+\item Do we allow for obstacles that cannot be moved?
+\item What coordinate frame should state be represented in? Seems like the end-effector frame could be useful.  Then all obstacles would be represented as distance from the end-effector which could simplify collision checking.
+\item Pras mentioned the sorting problem.  Could we use this framework to sort via pushing? Is that interesting/novel.
 \end{enumerate}
 
 \end{document}  
