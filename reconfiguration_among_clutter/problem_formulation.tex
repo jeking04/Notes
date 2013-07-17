@@ -6,6 +6,7 @@
 \usepackage{graphicx}				% Use pdf, png, jpg, or eps§ with pdflatex; use eps in DVI mode
 								% TeX will automatically convert eps --> pdf in pdflatex		
 \usepackage{amssymb}
+\usepackage{amsmath}
 
 \title{Notes on Reconfiguration Among Clutter}
 %\date{}							% Activate to display a given date or no date
@@ -15,12 +16,20 @@
 \section*{Introduction}
 We wish to build on Mehmet's previous work on reconfiguration among clutter and design a planner which will search the space of possible pushing trajectories to search for a valid grasp.  This document serves  as a scratch pad for formulating the problem.
 
+\section*{Assumptions}
+The following list enumerates the assumptions/assertions we are making throughout the formulation of this problem:
+\begin{enumerate}
+\item We assume we are planning with a floating end-effector.
+\item We have obstacles in our environment that don't move and should be avoided by the end-effector.
+\item Hitting an object doesn't affect trajectory of an action.
+\end{enumerate}
+
 \section*{Naive Problem Formulation}
 \subsection*{Representation of State}
 Define the following:
 \begin{enumerate}
-\item $q_t$ - an $n$-dimensional vector describing the configuration of the arm at time $t$
-\item  $O_t^i$ - the 3-dimensional ($x$, $y$, $\theta$) which represents the configuration of obstacle $i$ at time $t$
+\item $q_t$ - an $n$-dimensional vector describing the configuration of the end-effector at time $t$
+\item  $O_t^i$ - the 3-dimensional ($x$, $y$, $\theta$) which represents the configuration of object $i$ at time $t$
 \item $g_t$ - the 3-dimensional ($x$, $y$, $\theta$) configuration of the goal object at time $t$
 \end{enumerate}
 Then we can define the state at time $t$, $s_t$, by the vector:
@@ -28,13 +37,21 @@ Then we can define the state at time $t$, $s_t$, by the vector:
 q_t & g_t & O_t^1 & ... & O_t^k
 \end{array}
 \right] \]
-which represents the configuration of the arm, the pose of the goal object and the pose of all obstacles at a particular snapshot in time.
-
 
 \subsection{Representing the Goal}\label{sec:graspability}
-We can define the start state as the initial pose of the arm, initial pose of the goal object and the initial pose of all obstacles at a particular snapshot in time.  Defining the goal is less straightforward.  Define $e'_q$ as the pose of the end-effector in goal object frame when the arm is at configuration $q$.  Let $S$ be the set of all poses of the end-effector in goal object frame that result in a valid grasp of the object. Then we can say we which to find any $q$ such that $e'_q \in S$.
+We can define the start state as the initial pose of the arm, initial pose of the goal object and the initial pose of all obstacles at a particular snapshot in time.  Defining the goal is less straightforward.  We can say that the goal is a function only of the pose of the goal object and the arm configuration.  Thus we can define a function:
+\[ f(q_t, g_t) 
+\begin{cases}
+=0, & \textbf{the goal is graspable} \\
+\neq 0, & \textbf{otherwise} 
+\end{cases}
+\]
+In particular, let $S$ be the set of all poses of the end-effector in goal object frame that result in a valid grasp of the object. 
+Then we want to check the following:
+\[ q' = T^w_0F(q) \in S \]
+where $F(q)$ computes the pose of the end-effector when the arm is in configuration $q$ via use of forward kinematics and $T_0^w$ defines the transform from world frame to goal object frame.
 \newline\newline
-We can define a set of valid grasps using the concept of TSRs.  A TSR is comprised of a matrix, $Bw$, which expresses valid bounds of values for the pose of the end-effector in object frame:
+We can sample valid grasps using the concept of TSRs.  A TSR is comprised of a matrix, $Bw$, which expresses valid bounds of values for the pose of the end-effector in object frame:
 \[ Bw = \left[ \begin{array}{cc}
 x_{min} & x_{max} \\
 y_{min} & y_{max} \\
@@ -43,49 +60,52 @@ z_{min} & z_{max} \\
 \beta_{min} & \beta_{max} \\
 \theta_{min} & \theta_{max} \\
 \end{array}\right] \]
-Thus for a particular arm configuration $q$ we can first extract the pose of the end-effector in world coordinates, $e_q$, using forward kinematics:
-\[ e_q = F(q) \]
-We can then convert to the pose of the end-effector in goal object coordinates:
-\[ e'_q = e_q g^{-1}\]
-where $g$ represents the pose of the goal object in world coordinates.
-We can now check that the $x,y,z,\alpha,\beta, \theta$ values represented by the transform fall inside the bounds represented in the TSR.  If so, we have found a valid grasp.  Note: We will need to ensure that the pre shape of the hand during pushing is such that we can close the hand without fear of catching other obstacles.  Otherwise, we will have to do a collision check here.
+We can now sample $x, y, z, \alpha, \beta, \theta$ values from the valid bounds represented by $Bw$.  
+\newline\newline
+Note: We will need to ensure that the preshape of the hand during pushing is such that we can close the hand without fear of catching other obstacles.  Otherwise, we will have to do a collision check here.
 
 \subsection*{Action Space}
 We want to search over our action space to find a series of actions that, when strung together, will provide a path for the end-effector to grasp the goal object.  We can define an action using the following parameters:
 \begin{enumerate}
-\item $\theta$ - Specifies the direction of the movement.
-\item $d$ - Specifies duration of the movement.
-\item $p$ - Represents the pre shape of the hand during the movement.
-\item $v$ - The volume of space swept out by the hand during execution of the movement (TODO: should this be limited to just hand, or do we expand to also include the full manipulator)
+\item $\dot{v}$ -  The forward velocity of the end-effector.
+\item $\dot{\theta}$ - The rotational velocity of the end-effector.
+\item $\dot{a}$ - The hand aperture.
+\item $\Delta t$ -The duration of the action.
 \end{enumerate}
-The cost of an action will be calculated as the length of the action.  We could also add a penalty for the number of objects that come into collision with the hand during action execution.  However, this will guide the planner toward longer but collision free regions of search space, which is not the point.
+For each action, we precompute the volume of space swept by the end-effector during execution of the movement.  
 
 \subsection*{Forward Planning with Graph Search}
-Given a start configuration, we can perform a forward search through the graph by forward simulating each action in the action set.  During simulation we will use the physics model developed by Mehmet to  simulate the movement of any objects that intersect with the swept volume, $v$, during action executing.  Note: Does this use the concept of grasp region? 
+For performing forward search we define the following mapping:
+\[ s' = T(s, a) \]
+Here $T$ forward simulates action $a$ starting from state $s$ and ends at state $s'$. We will use the physics simulator developed by Mehmet/Koval to simulate the action and any collisions between the end-effector and objects in the state space.  If an object is pushed into contact with either another object or an obstacle, the action will be consider invalid and the edge will not be added to the search graph.
 
-There are two cases where an edge (action) will not be added to the graph:
-\begin{enumerate}
-\item An object is pushed into collision with another object in the scene
-\item An object is funneled into the hand as a result of the action.
-\end{enumerate}
-
-To determine when the search can be stopped, the configuration of the goal object and the end-effector will be examined to determine whether the goal object has become graspable.  Details of this check were explained in section ~\ref{sec:graspability}.
+We evaluate the function $f(q_{s'}, g_{s'})$ to determine when the search can be stopped.Details of this check were explained in section ~\ref{sec:graspability}.
 
 We will turn the state space into a set of discrete values in each dimension and snap to the center of the nearest grid cell during execution.   This will allow us to recognize when we are exploring a region of state space that we have previously explored.  
 
-We assume that we can precompute the volume, $v$, of space swept by each action and then just apply a transform to use it at runtime.  Encoded in this assumption is the fact that collision with an obstacle will move the obstacle not the manipulator.  In other words, collision with the obstacle will not knock the manipulator off course.
-
+TODO: Continue updating notes from meeting with sidd, starting here.
 \subsection*{Backward Planning with Graph Search}
-Backward simulation of an action is less trivial than forward simulation.  To do this, we can plan the actions in reverse, as though they ended in our current cell.  Initially we don't take into account any possible collisions.  We identify 3 unique scenarios:
+Backward simulation of an action is less trivial than forward simulation.  To do this, we can plan the actions in reverse, as though they ended in our current cell.  For performing backward search, we must define the following mapping:
+\[ s = T^{-1}(s', a) \]
+We note that unlike forward search, this mapping will often be one to many.  In particular, we identify the following possible scenarios during back propagation of an action:
 \begin{enumerate}
-\item If, when the push is backward simulated, there is an obstacle in the footprint, don't add the edge to the graph. This action was not a possible predecessor, as the obstacle in the footprint would have been removed during action execution.
-\item If there are no obstacles touching the footprint, we can just add the state that starts the action as a predecessor without changing the pose of any obstacles in the scene.
-\item If an obstacle is on the edge of the footprint we add two states: the first represents the obstacle not being moved, the other represents the obstacle being moved.  Here we need to either prove that it could have only been moved in one way, or enumerate all the different ways it could have been moved. 
+\item If, when the push is backward simulated, there is an object in the footprint, don't add the edge to the graph. This action was not a possible predecessor, as the obstacle in the footprint would have been removed during action execution.
+\item If there are no object touching the footprint, we can just add the state that starts the action as a predecessor without changing the pose of any obstacles in the scene.  In this case we have a 1-to-1 mapping between state and predecessor.
+\item If an object is on the edge of the footprint we add multiple states: the first represents the object not being moved, the others represent various locations where the object could have started and been pushed to the final location.  Here we must prove that we can enumerate all possible locations for the start of the object.
 \end{enumerate}
 
-
-\subsubsection*{Heuristics}
-An obvious choice for heuristic is straight line distance from the end-effector to the goal object.  To make the heuristic admissible, it will have to encode the straight line distance from the closest point of the hand to the goal object and the goal object.  
+\subsection*{Distance Functions}
+If we want to use this formulation with a BiRRT planner we must define a valid distance function.  We examine the use of the following:
+\[ d(T1_q^w, T2_q^w) \]
+where $T_q^w$ defines the end-effector in goal object frame.
+TODO: Try to prove this is valid and good.
+\section*{Feasible Worlds}
+We identify the following statements which much hold for a world be feasible:
+\begin{enumerate}
+\item No contact between any object and an obstacle
+\item No contact between any object and another object
+\item No contact between the end-effector and an obstacle
+\end{enumerate}
 
 \section*{Trivial Scenario}
 We will first implement and test a fairly trivial scenario to prove the concept and get a feel for scenes where this is useful and possible gotchas.   The following describes the scenario:
@@ -100,7 +120,6 @@ We will first implement and test a fairly trivial scenario to prove the concept 
 \section*{Open Questions}
 The following is a list of questions to consider:
 \begin{enumerate}
-\item Do we allow for obstacles that cannot be moved?
 \item What coordinate frame should state be represented in? Seems like the end-effector frame could be useful.  Then all obstacles would be represented as distance from the end-effector which could simplify collision checking.
 \item Pras mentioned the sorting problem.  Could we use this framework to sort via pushing? Is that interesting/novel.
 \end{enumerate}
