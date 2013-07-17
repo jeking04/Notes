@@ -68,10 +68,26 @@ We will turn the state space into a set of discrete values in each dimension and
 
 We assume that we can precompute the volume, $v$, of space swept by each action and then just apply a transform to use it at runtime.  Encoded in this assumption is the fact that collision with an obstacle will move the obstacle not the manipulator.  In other words, collision with the obstacle will not knock the manipulator off course.
 
+\subsection*{Backward Planning with Graph Search}
+Backward simulation of an action is less trivial than forward simulation.  To do this, we can plan the actions in reverse, as though they ended in our current cell.  Initially we don't take into account any possible collisions.  We identify 3 unique scenarios:
+\begin{enumerate}
+\item If, when the push is backward simulated, there is an obstacle in the footprint, don't add the edge to the graph. This action was not a possible predecessor, as the obstacle in the footprint would have been removed during action execution.
+\item If there are no obstacles touching the footprint, we can just add the state that starts the action as a predecessor without changing the pose of any obstacles in the scene.
+\item If an obstacle is on the edge of the footprint we add two states: the first represents the obstacle not being moved, the other represents the obstacle being moved.  Here we need to either prove that it could have only been moved in one way, or enumerate all the different ways it could have been moved. 
+\end{enumerate}
+
+
 \subsubsection*{Heuristics}
 An obvious choice for heuristic is straight line distance from the end-effector to the goal object.  To make the heuristic admissible, it will have to encode the straight line distance from the closest point of the hand to the goal object and the goal object.  
 
 \section*{Trivial Scenario}
-We will first implement and test a fairly trivial scenario to prove the concept and get an idea about scenes.  
+We will first implement and test a fairly trivial scenario to prove the concept and get a feel for scenes where this is useful and possible gotchas.   The following describes the scenario:
+\begin{enumerate}
+\item Point robot - described by $x$, $y$ location
+\item Point obstacles - again described by $x$, $y$ location
+\item Goal - The goal is to get the point robot within 1 grid cell in each of the 4 cardinal directions of the goal item - which is a point described by $x$, $y$ location
+\item Action set involves movements in only the cardinal directions.
+\item If an obstacle is hit during action execution it moves in a direction +90 degrees from the direction of the action by 1 single grid cell.
+\end{enumerate}
 
 \end{document}  
