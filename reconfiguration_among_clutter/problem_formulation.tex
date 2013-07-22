@@ -83,7 +83,6 @@ We evaluate the function $f(q_{s'}, g_{s'})$ to determine when the search can be
 
 We will turn the state space into a set of discrete values in each dimension and snap to the center of the nearest grid cell during execution.   This will allow us to recognize when we are exploring a region of state space that we have previously explored.  
 
-TODO: Continue updating notes from meeting with sidd, starting here.
 \subsection*{Backward Planning with Graph Search}
 Backward simulation of an action is less trivial than forward simulation.  To do this, we can plan the actions in reverse, as though they ended in our current cell.  For performing backward search, we must define the following mapping:
 \[ s = T^{-1}(s', a) \]
@@ -124,4 +123,37 @@ The following is a list of questions to consider:
 \item Pras mentioned the sorting problem.  Could we use this framework to sort via pushing? Is that interesting/novel.
 \end{enumerate}
 
+\section*{Related Reading}
+\begin{enumerate}
+\item "Two level RRT Planning for Robotic Push Manipulation" Zito, et. al  IROS 2012
+\begin{itemize}
+\item Present a two-level approach for push planning
+\item The first level is an RRT which plans in the configuration space of the object being pushed
+\item The second level is a depth first search which links pushes together to connect a sampled node to the search graph
+\begin{enumerate}
+\item Once a node is sampled for RRT, N candidate pushes are selected
+\item The one which moves closest to the sampled node is executed until the distance to the sampled node decreases, then N new candidate pushes are selected and the process repeats until we are very close to the sampled node.
+\item A push is checked by planning a straight line path in confiugraiton space that goes through the object, then forward simulating the execution of that path and the resulting push using a physics simulator.  After the action has been simulated for one time step, the distance to the sampled node is checked.  If it has decreased, the action along that straight line continues to be simulated. If it hasn't decreased, N new candidate pushes starting at the current position of the pushed object are generated and the process continues.
+\end{enumerate}
+\end{itemize}
+\item "Achievable Push-Manipulation for Complex Passive Mobile Objects using Past Experience" Mericil, et. al. AAMAS 2013
+\begin{itemize}
+\item Uses learning and RRTs to build a planner for pushing in worlds where quasi-static assumption does not hold
+\item First, a set of object trajectories is learned using the following steps
+\begin{enumerate}
+\item Pick m random push configurations, where a configuration is defined by a push point, a push direction and a duration
+\item Collect n samples of execution of each of the m push configurations
+\item Model the final pose of the object at the end of the push with a normal distribution
+\item Remember these m models of object trajectories
+\item Pick several goals in the task environment and try to plan to them in order to test how useful the set of learned trajectories is so far
+\item Repeat
+\end{enumerate}
+\item During planning , use the memorized actions during the extend portion of the RRT
+\item Uses an interesting distance function:
+\[\sim(p_1, p_2) = \frac{d_{max}}{d(p_1, p_2)} cosSim(\hat{p_1}, \hat{p_2})\]
+ where $d_{max}$ is the max distance in the task environment, $d(p_1, p_2)$ is the Euclidean distance between the two poses and $cosSim(\hat{p_1}, \hat{p_2})$ is the cosine similarity between the two poses assuming they are unit vectors from the origin.
+\end{itemize}
+
+\end{enumerate}
 \end{document}  
+
