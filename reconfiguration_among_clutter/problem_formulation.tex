@@ -153,7 +153,29 @@ The following is a list of questions to consider:
 \[\sim(p_1, p_2) = \frac{d_{max}}{d(p_1, p_2)} cosSim(\hat{p_1}, \hat{p_2})\]
  where $d_{max}$ is the max distance in the task environment, $d(p_1, p_2)$ is the Euclidean distance between the two poses and $cosSim(\hat{p_1}, \hat{p_2})$ is the cosine similarity between the two poses assuming they are unit vectors from the origin.
 \end{itemize}
+\item "Disassembly Path Planning for Complex Articulated Objects" Cortes, Jaillet, Simeon 2007
+\begin{itemize}
+\item Present an RRT algorithm for disassembly of objects with articulated pars
+\item Break the state space into 2 pieces: active and passive
+\item Initially sample poses from the active piece of the state space and extend by making changes to active state
+\item If passive state space impedes extension, continue extension by making changes to the passive portion of the state
+\end{itemize}
+\end{enumerate}
 
+\section*{Random Ideas that involve related reading}
+\subsection*{3 - Disassembly Path Planning for Complex Articulated Objects}
+We could possible make a similar separation of our state space.  In particular we would say:
+\[q_{act} = q_t \]
+\[q_{pas} =  \left[O^1,...,O^k, g\right]\]
+Then at time $t$ we could do the following to grow the backward tree:
+\begin{enumerate}
+\item Sample a configuration $q_{act}^{rand}$ which represents only a change to the end-effector.
+\item Find the nearest configuration using a distance function based only on the end-effector - for example, euclidean distance between end-effector poses.
+\item Backward simulate an action. Stop the action if a collision is detected, and return invalid.  Otherwise, label the configuration at the start of the action $q_{near}$ and add it as a node to the graph. 
+\item During backwards simulation, generate a list of objects touching the footprint.
+\item For each item $O^i$ in that list, generate a region $R^i$ where the object could have been pushed from. TODO: This is nontrivial, but perhaps we can use Mehmet's work in some way.
+\item Sample a configuration $q_{pas}^{rand}$ which differs from $q_{near}$ only in the pose of object $O^i$. Call this new configuration $q_{near}$. Repeat until all items have been adjusted. Add $q_{near}$ as a node to the graph.
 \end{enumerate}
 \end{document}  
+
 
