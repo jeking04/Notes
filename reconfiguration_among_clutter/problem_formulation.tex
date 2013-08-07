@@ -133,19 +133,38 @@ During forward simulation, any contact between the robot and a movable object wi
 \SetKwFunction{Sample}{SampleConfiguration}
 \SetKwFunction{Nearest}{NearestNeighbor}
 \SetKwFunction{Extend}{Extend}
+\SetKwFunction{Running}{Running}
+\SetKwFunction{AddGoal}{AddGoal}
+\SetKwFunction{ExtractPath}{ExtractPath}
+\SetKwFunction{Swap}{Swap}
 \KwIn{ the start node $s_{0}$ }
+\KwIn{ $p_{sample}$ }
 \KwOut{ the tree $T$ }
 \BlankLine
-$T \leftarrow$ \InitTree($s_{0}$) \;
-\While{not \ContainsGoal{$T$}} {
+$T_{start} \leftarrow$ \InitTree($s_{0}$) \;
+$T_{goal} \leftarrow$ \InitTree(NULL) \;
+$T_a \gets T_{start}$ \;
+$T_b \gets T_{goal}$ \;
+\While{ \Running{} } {
+\If{$T_{goal}.size = 0$ or $rand(0,1) < p_{sample}$}{
+\AddGoal($T_{goal}$)
+}
+{
 $s_{rand} \gets$ \Sample{} \;
-$s_{near} \gets$ \Nearest{$T$, $s_{rand}$} \;
-$s_{new} \gets$ \Extend{$T$, $s_{near}$, $s_{rand}$} \;
-\If{\Different{$s_{new}$, $s_{near}$}} {
-$T$.add\_vertex($s_{new}$) \;
-$T$.add\_edge($s_{near}$, $s_{new}$) \;
-}
-}
+$s_{near}^a \gets$ \Nearest{$T_a$, $s_{rand}$} \;
+$s_{reached}^a \gets$ \Extend{$T_a$, $s_{near}^a$, $s_{rand}$} \;
+$T_a$.add\_vertex($s_{reached}^a$) \;
+$T_a$.add\_edge($s_{near}^a$, $s_{reached}^a$) \;
+$s_{near}^b \gets$ \Nearest($T_b$, $s_{reached}^a$) \;
+$s_{reached}^b \gets$ \Extend($T_b$, $s_{near}^b$, $s_{reached}^a$) \;
+$T_b$.add\_vertex($s_{reached}^b$) \;
+$T_b$.add\_edge($s_{near}^b$, $s_{reached}^b$) \;
+\If{$s_{reached}^a = s_{reached}^b$} {
+$P \gets$ \ExtractPath($T_a$, $s_{reached}^a$, $T_b$, $s_{reached}^b$) \;
+return $P$
+}{
+\Swap($T_a$, $T_b$) \;
+}}}
 \label{alg:gsrrtconnect}
 \caption{The RRT-Connect algorithm with Goal Sets}
 \end{algorithm}
