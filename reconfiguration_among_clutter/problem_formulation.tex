@@ -99,7 +99,7 @@ The SampleConfiguration function samples a state, $s_{rand}$, in the following m
 
 \subsection*{NearestNeighbor}
 To define the NearestNeighbor function we need to implement a distance metric.  For our metric we choose the norm of the distance between the two state vectors:
-\[ d(s_j, s_k) = \| s_j - s_k\| \]
+\[ d(s_j, s_k) = \left| s_j - s_k\right| \]
 
 \subsection*{Extend} 
 \label{sec:extend}
@@ -170,6 +170,10 @@ For the two unambiguous cases in the reverse search (Figure~\ref{fig:backwards_s
 
 Using this representation, we can now reduce our infinite number of start locations down to two: the first represents a pure transit by the end-effector, where the object is not pushed.  The second represents the infinite set of transfers. 
 
+Our new state representation requires an adjustment to the distance metric. In particular, we define the distance between two pre-images as follows:
+\[ d'(P^{M_i}_j, P^{M_i}_k) = \min_{O^{M_i}_j \in P^{M_i}_j, O^{M_i}_k \in P^{M_i}_k} \left| O^{M_i}_j - O^{M_i}_k \right|^2 \]
+Then:
+\[ d(s_j, s_k) = \sqrt{\left| q_j - q_k \right|^2 + \left| g_j + g_k \right|^2 + \sum_i d'(P^{M_i}_j, P^{M_i}_k)} \]
 \begin{figure}[htbp]
 \begin{center}
 \includegraphics[width=1.0\textwidth]{example_expansion}
